@@ -1,2 +1,2 @@
-# Data_Analysis_Exerecise
+# Data_Analysis_Exercise
 Data Analysis Subject Exercise with unity.
