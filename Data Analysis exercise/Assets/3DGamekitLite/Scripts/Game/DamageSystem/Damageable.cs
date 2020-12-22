@@ -37,10 +37,22 @@ namespace Gamekit3D
 
         System.Action schedule;
 
+        EventHandler eventHandler;
+
+        public delegate void PlayerDeath(ENEMY_TYPE type);
+        public static PlayerDeath PlayerDeathEvent;
+
+        public delegate void EnemyDeath(GameObject enemy, ENEMY_TYPE type);
+        public static EnemyDeath EnemyDeathEvent;
+
+        public delegate void PlayerHurt(ENEMY_TYPE type);
+        public static PlayerHurt PlayerHurtEvent;
+
         void Start()
         {
             ResetDamage();
             m_Collider = GetComponent<Collider>();
+            eventHandler = GameObject.Find("EventHandler").GetComponent<EventHandler>();
         }
 
         void Update()
@@ -97,9 +109,39 @@ namespace Gamekit3D
             currentHitPoints -= data.amount;
 
             if (currentHitPoints <= 0)
+            {
                 schedule += OnDeath.Invoke; //This avoid race condition when objects kill each other.
+                if (this.gameObject.layer == 9)//Player
+                {
+                    if (data.damager.gameObject.name == "BodyDamager")
+                        PlayerDeathEvent?.Invoke(ENEMY_TYPE.CHOMPER);
+
+                    else if (data.damager.gameObject.name == "Spit(Clone)")
+                        PlayerDeathEvent?.Invoke(ENEMY_TYPE.SPITTER);
+
+                }
+
+                else if (this.gameObject.layer == 23) // Enemy
+                {
+                    if (gameObject.name == "Chomper")
+                        EnemyDeathEvent?.Invoke(gameObject, ENEMY_TYPE.CHOMPER);
+
+                    else if (gameObject.name == "Spitter")
+                        EnemyDeathEvent?.Invoke(gameObject, ENEMY_TYPE.SPITTER);
+                }
+            }
+
             else
+            {
+                if (data.damager.gameObject.name == "BodyDamager")
+                    PlayerHurtEvent?.Invoke(ENEMY_TYPE.CHOMPER);
+
+                else if (data.damager.gameObject.name == "Spit(Clone)")
+                    PlayerHurtEvent?.Invoke(ENEMY_TYPE.SPITTER);
+
                 OnReceiveDamage.Invoke();
+
+            }
 
             var messageType = currentHitPoints <= 0 ? MessageType.DEAD : MessageType.DAMAGED;
 
