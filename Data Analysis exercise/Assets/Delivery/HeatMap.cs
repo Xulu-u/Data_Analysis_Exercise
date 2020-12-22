@@ -4,193 +4,192 @@ using UnityEngine;
 using System;
 using UnityEngine.UI;
 
+
 public class HeatMap : MonoBehaviour
 {
-    int gridSize = 200;
-    float mapX = -34, mapY = -40;
-    int[,] grid;
-
+    int GridSizeX = 200, GridSizeY = 200;
+    float map_originX = -34, map_originY = -40;
+    int[,] gridArray;
     public GameObject heatMapCube;
     public float cubeSize = 1;
     public float transparency = 0.8f;
-
-    public bool showPosition = false;
-    public bool showDeath = false;
-    public bool showFall = false;
-    public bool showEnemies = false;
 
     //--------------------------
     [HideInInspector]
     public List<GameObject> instancedCubes;
 
     private Reader reader;
+
     public Gradient ColorGradient;
 
-    private float heatMax = 0;
-    private float heatMin = 0;
+    private float heatMaxValue = 0;
+    private float heatMinValue = 0;
+
+  
+
+    public Dropdown heatmap_selector;
+    public Dropdown surface_selector;
+    public Dropdown enemy_selector;
+   
 
     public void Awake()
     {
+        heatmap_selector.onValueChanged.AddListener(delegate { reloadHeatmap(); });
+        surface_selector.onValueChanged.AddListener(delegate { reloadHeatmap(); });
+        enemy_selector.onValueChanged.AddListener(delegate { reloadHeatmap(); });
+
         reader = gameObject.GetComponent<Reader>();
 
-        gridSize = (int)(cubeSize * (float)gridSize);
-        gridSize = (int)(cubeSize * (float)gridSize);
+        GridSizeX = (int)(cubeSize * (float)GridSizeX);
+        GridSizeY = (int)(cubeSize * (float)GridSizeY);
 
-        grid = new int[gridSize, gridSize];
+        gridArray = new int[GridSizeX, GridSizeY];
     }
     void Start()
     { }
 
-    public void ShowPosition()
-    {
-        showPosition = !showPosition;
-        showDeath = false;
-        showFall = false;
-        showEnemies = false;
-    }
-    public void ShowDeath()
-    {
-        showPosition = false;
-        showDeath = !showDeath;
-        showFall = false;
-        showEnemies = false;
-    }
-    public void ShowFall()
-    {
-        showPosition = false;
-        showDeath = false;
-        showFall = !showFall;
-        showEnemies = false;
-    }
-    public void ShowEnemies()
-    {
-        showPosition = false;
-        showDeath = false;
-        showFall = false;
-        showEnemies = !showEnemies;
-    }
-
     public void clearMap()
     {
         foreach (GameObject obj in instancedCubes)
+        {
             Destroy(obj);
+        }
         instancedCubes.Clear();
     }
+   
 
     public void reloadHeatmap()
     {
-        grid = new int[gridSize, gridSize];
+        gridArray = new int[GridSizeX, GridSizeY];
+
         heatMapCube.transform.localScale = new Vector3(cubeSize, cubeSize, cubeSize);
 
         CountEvents();
+
         clearMap();
-        ShowGrid();
+
+        VisualizeGrid();
     }
 
     private void SetValue(float x, float y)
     {
-        int newX = (int)(x / cubeSize - mapX / cubeSize);
-        int newY = (int)(y / cubeSize - mapY / cubeSize);
+        int newX = (int)(x / cubeSize - map_originX / cubeSize);
+        int newY = (int)(y / cubeSize - map_originY / cubeSize);
 
-        if (newX >= 0 && newY >= 0 && newX < gridSize && newY < gridSize)
-            grid[newX, newY]++;
+
+        if (newX >= 0 && newY >= 0 && newX < GridSizeX && newY < GridSizeY)
+        {
+            gridArray[newX, newY]++;
+        }
     }
 
     private void OnValidate()
     {
-        if (reader != null && instancedCubes.Count > 0)
-            reloadHeatmap();
+        if (reader != null)
+        {
+            if (instancedCubes.Count > 0)
+                reloadHeatmap();
+
+        }
     }
 
     public void CountEvents()
     {
         float x = 0, y = 0;
 
-        if (showPosition)
+        switch ((EventFilter)heatmap_selector.value)
         {
-            for (int i = 0; i < reader.arrPosition.Count; i++)
-            {
-                EventData eventData = reader.arrPosition[i];
-                x = ((PlayerPositionEvent)eventData).x;
-                y = ((PlayerPositionEvent)eventData).z;
-                SetValue(x, y);
-            }
-        }
+            case EventFilter.Position:
+                for (int i = 0; i < reader.arrPosition.Count; i++)
+                {
+                    EventData eventData = reader.arrPosition[i];
+                    x = ((PlayerPositionEvent)eventData).x;
+                    y = ((PlayerPositionEvent)eventData).z;
+                    SetValue(x, y);
+                }
 
-        else if (showDeath)
-        {
-            for (int i = 0; i < reader.arrDeath.Count; i++)
-            {
-                EventData eventData = reader.arrDeath[i];
-                x = ((PlayerDeathEvent)eventData).x;
-                y = ((PlayerDeathEvent)eventData).z;
-                SetValue(x, y);
-            }
-        }
-
-        else if (showFall)
-        {
-            for (int i = 0; i < reader.arrFalls.Count; i++)
-            {
-                EventData eventData = reader.arrFalls[i];
-                x = ((PlayerFallsEvent)eventData).x;
-                y = ((PlayerFallsEvent)eventData).z;
-                SetValue(x, y);
-            }
-        }
-
-        else if (showEnemies)
-        {
-            for (int i = 0; i < reader.arrEnemyKills.Count; i++)
-            {
-                EventData eventData = reader.arrEnemyKills[i];
-                x = ((EnemyKillsEvent)eventData).x;
-                y = ((EnemyKillsEvent)eventData).z;
-                SetValue(x, y);
-            }
+                break;
+            case EventFilter.PlayerDeath:
+                for (int i = 0; i < reader.arrDeath.Count; i++)
+                {
+                    EventData eventData = reader.arrDeath[i];
+                    if (((PlayerDeathEvent)eventData).enemy == enemy_selector.value ||
+                        enemy_selector.value == 0)
+                    {
+                        x = ((PlayerDeathEvent)eventData).x;
+                        y = ((PlayerDeathEvent)eventData).z;
+                        SetValue(x, y);
+                    }
+                }
+                break;
+            case EventFilter.Fall:
+                for (int i = 0; i < reader.arrFalls.Count; i++)
+                {
+                    EventData eventData = reader.arrFalls[i];
+                    if (((PlayerFallsEvent)eventData).surface == surface_selector.value ||
+                       surface_selector.value == 0)
+                    {
+                        x = ((PlayerFallsEvent)eventData).x;
+                        y = ((PlayerFallsEvent)eventData).z;
+                        SetValue(x, y);
+                    }
+                }
+                break;
+            case EventFilter.EnemyDeath:
+                for (int i = 0; i < reader.arrEnemyKills.Count; i++)
+                {
+                    EventData eventData = reader.arrEnemyKills[i];
+                    if (((EnemyKillsEvent)eventData).enemy == enemy_selector.value ||
+                        enemy_selector.value == 0)
+                    {
+                        x = ((EnemyKillsEvent)eventData).x;
+                        y = ((EnemyKillsEvent)eventData).z;
+                        SetValue(x, y);
+                    }
+                }
+                break;
         }
 
         // Change dynamically color
-        heatMax = 0;
-        heatMin = 0;
-        for (int i = 0; i < gridSize; i++)
+        int c = 0;
+        heatMaxValue = 0;
+        heatMinValue = 0;
+        for (int i = 0; i < GridSizeX; i++)
         {
-            for (int j = 0; j < gridSize; j++)
+            for (int j = 0; j < GridSizeY; j++)
             {
-                if (grid[i, j] > 0)
+                if (gridArray[i, j] > 0)
                 {
-                    if (grid[i, j] >= heatMax)
-                        heatMax = grid[i, j];
-                    else if (heatMin > grid[i, j] || heatMin == 0)
-                        heatMin = grid[i, j];
+                    if (gridArray[i, j] >= heatMaxValue)
+                        heatMaxValue = gridArray[i, j];
+                    else if (heatMinValue > gridArray[i, j] || heatMinValue == 0)
+                        heatMinValue = gridArray[i, j];
                 }
             }
         }
-        heatMax -= heatMin;
+        heatMaxValue = heatMaxValue - heatMinValue;
     }
 
-    void ShowGrid()
+    void VisualizeGrid()
     {
-        for (int x = 0; x < gridSize; x++)
+        for (int x = 0; x < GridSizeX; x++)
         {
-            for (int y = 0; y < gridSize; y++)
+            for (int y = 0; y < GridSizeY; y++)
             {
-                if (grid[x, y] > 0)
-                    SpawnCube(x, y, grid[x, y]);
+                if (gridArray[x, y] > 0)
+                    SpawnCube(x, y, gridArray[x, y]);
             }
         }
     }
 
     void SpawnCube(int x, int y, int count)
     {
-        float pos_x = x * cubeSize + mapX + cubeSize / 2;
-        float pos_y = y * cubeSize + mapY + cubeSize / 2;
-        Vector3 pos = new Vector3(pos_x, GetHeight(pos_x, pos_y), pos_y);
-
+        float nwx = x * cubeSize + map_originX + cubeSize / 2;
+        float nwy = y * cubeSize + map_originY + cubeSize / 2;
+        Vector3 pos = new Vector3(nwx, GetHeight(nwx, nwy), nwy);
         GameObject cube = Instantiate(heatMapCube, pos, Quaternion.identity);
         instancedCubes.Add(cube);
-
-        float f = Mathf.Clamp01((float)count / heatMax);
+        float f = Mathf.Clamp01((float)count / heatMaxValue);
         Color c = ColorGradient.Evaluate(f);
         c.a = transparency;
         cube.GetComponent<Renderer>().material.SetColor("_Color", c);
@@ -202,7 +201,10 @@ public class HeatMap : MonoBehaviour
         RaycastHit hit;
         int layerMask = 1 << 16;
         if (Physics.Raycast(pos, Vector3.down, out hit, Mathf.Infinity, layerMask))
+        {
             return hit.point.y + cubeSize / 2;
+        }
         return 0;
     }
+
 }
