@@ -43,3 +43,19 @@ The following packages were added:
   com.unity.textmeshpro@2.1.1
   com.unity.timeline@1.2.17
   com.unity.ugui@1.0.0
+
+=== Tue Dec 22 18:58:50 2020
+
+Packages were changed.
+Update Mode: mergeDefaultDependencies
+
+The following packages were added:
+  com.unity.2d.sprite@1.0.0
+  com.unity.2d.tilemap@1.0.0
+  com.unity.cinemachine@2.3.3
+  com.unity.ext.nunit@1.0.0
+  com.unity.google.resonance.audio@2.0.0
+  com.unity.ide.visualstudio@1.0.11
+  com.unity.polybrush@1.0.1
+  com.unity.postprocessing@2.3.0
+  com.unity.probuilder@4.2.3
